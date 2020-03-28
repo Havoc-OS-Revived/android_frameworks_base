@@ -228,4 +228,6 @@
     <java-symbol type="string" name="applock_prompt_title" />
     <java-symbol type="string" name="applock_prompt_subtitle" />
 
+    <!-- Enable face auth only when swiping security view -->
+    <java-symbol type="bool" name="config_faceAuthOnlyOnSecurityView" />
 </resources>

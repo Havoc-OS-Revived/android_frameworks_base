@@ -338,4 +338,6 @@
     <!-- Whether to enable performance tuning in Gaming mode -->
     <bool name="config_enableGamingPerformanceTuning">false</bool>
 
+    <!-- Enable face auth only when swiping security view -->
+    <bool name="config_faceAuthOnlyOnSecurityView">false</bool>
 </resources>
