@@ -16628,6 +16628,12 @@ public final class Settings {
         public static final String WIFI_OFF_TIMEOUT = "wifi_off_timeout";
 
         /**
+         * Control whether to remove the restriction when selecting folders through SAF.
+         * @hide
+         */
+        public static final String NO_STORAGE_RESTRICT = "no_storage_restrict";
+
+        /**
          * The amount of time in milliseconds before bluetooth is turned off
          * @hide
          */
