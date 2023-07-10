@@ -86,7 +86,6 @@ class InputConsumerImpl implements IBinder.DeathRecipient {
         mWindowHandle.ownerUid = Process.myUid();
         mWindowHandle.inputFeatures = 0;
         mWindowHandle.scaleFactor = 1.0f;
-        mWindowHandle.trustedOverlay = true;
 
         mInputSurface = mService.makeSurfaceBuilder(mService.mRoot.getDisplayContent(displayId).getSession())
                 .setContainerLayer()
