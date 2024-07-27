@@ -15,8 +15,16 @@
  */
 package com.android.internal.util.custom;
 
+import android.app.ActivityTaskManager;
 import android.app.Application;
+import android.app.TaskStackListener;
+import android.content.ComponentName;
+import android.content.Context;
+import android.os.Environment;
+import android.os.Binder;
 import android.os.Build;
+import android.os.Process;
+import android.os.SystemProperties;
 import android.util.Log;
 
 import java.lang.reflect.Field;
@@ -29,7 +37,8 @@ import java.util.Map;
 public class PixelPropsUtils {
 
     private static final String TAG = PixelPropsUtils.class.getSimpleName();
-    private static final boolean DEBUG = false;
+    private static final String PROP_HOOKS = "persist.sys.pihooks_";
+    private static final boolean DEBUG = SystemProperties.getBoolean(PROP_HOOKS + "DEBUG", false);
 
     private static final Map<String, Object> propsToChangeGeneric;
     private static final Map<String, Object> propsToChangePixel5;
@@ -42,6 +51,18 @@ public class PixelPropsUtils {
             "com.android.vending",
             "com.breel.wallpapers20"
     };
+            
+    private static final Map<String, String> DEFAULT_VALUES = Map.of(
+        "BRAND", "google",
+        "MANUFACTURER", "Google",
+        "DEVICE", "husky",
+        "FINGERPRINT", "google/husky_beta/husky:15/AP31.240517.022/11948202:user/release-keys",
+        "MODEL", "Pixel 8 Pro",
+        "PRODUCT", "husky_beta",
+        "DEVICE_INITIAL_SDK_INT", "21",
+        "SECURITY_PATCH", "2024-07-05",
+        "ID", "AP31.240617.009"
+    );
 
     private static final String[] packagesToChangePixel7Pro = {
             "com.google.android.apps.wallpaper",
@@ -237,51 +258,52 @@ public class PixelPropsUtils {
 
     private static void setPropValue(String key, Object value) {
         try {
-            if (DEBUG) Log.d(TAG, "Defining prop " + key + " to " + value.toString());
-            Field field = Build.class.getDeclaredField(key);
-            field.setAccessible(true);
-            field.set(null, value);
-            field.setAccessible(false);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+            Field field = getBuildClassField(key);
+            if (field != null) {
+                field.setAccessible(true);
+                if (field.getType() == int.class) {
+                    if (value instanceof String) {
+                        field.set(null, Integer.parseInt((String) value));
+                    } else if (value instanceof Integer) {
+                        field.set(null, (Integer) value);
+                    }
+                } else if (field.getType() == long.class) {
+                    if (value instanceof String) {
+                        field.set(null, Long.parseLong((String) value));
+                    } else if (value instanceof Long) {
+                        field.set(null, (Long) value);
+                    }
+                } else {
+                    field.set(null, value.toString());
+                }
+                field.setAccessible(false);
+                dlog("Set prop " + key + " to " + value);
+            } else {
+                Log.e(TAG, "Field " + key + " not found in Build or Build.VERSION classes");
+            }
+        } catch (NoSuchFieldException | IllegalAccessException | IllegalArgumentException e) {
             Log.e(TAG, "Failed to set prop " + key, e);
         }
     }
 
-    private static void setVersionField(String key, Object value) {
+    private static Field getBuildClassField(String key) throws NoSuchFieldException {
         try {
-            if (DEBUG) Log.d(TAG, "Defining version field " + key + " to " + value.toString());
+            Field field = Build.class.getDeclaredField(key);
+            dlog("Field " + key + " found in Build.class");
+            return field;
+        } catch (NoSuchFieldException e) {
             Field field = Build.VERSION.class.getDeclaredField(key);
-            field.setAccessible(true);
-            field.set(null, value);
-            field.setAccessible(false);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            Log.e(TAG, "Failed to set version field " + key, e);
-        }
-    }
-
-    private static void setVersionFieldString(String key, String value) {
-        try {
-            Field field = Build.VERSION.class.getDeclaredField(key);
-            field.setAccessible(true);
-            field.set(null, value);
-            field.setAccessible(false);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            Log.e(TAG, "Failed to spoof Build." + key, e);
+            dlog("Field " + key + " found in Build.VERSION.class");
+            return field;
         }
     }
 
     private static void spoofBuildGms() {
-        // Alter model name and fingerprint to NVIDIA Shield TV for avoid hardware attestation enforcement
-        setPropValue("BRAND", "NVIDIA");
-        setPropValue("PRODUCT", "foster_e");
-        setPropValue("MODEL", "SHIELD Android TV");
-        setPropValue("MANUFACTURER", "NVIDIA");
-        setPropValue("DEVICE", "foster");
-        setPropValue("FINGERPRINT", "NVIDIA/foster_e/foster:7.0/NRD90M/2427173_1038.2788:user/release-keys");
-        setPropValue("TYPE", "user");
-        setPropValue("TAGS", "release-keys");
-        setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.N);
-        setVersionFieldString("SECURITY_PATCH", "2018-01-05");
+        for (Map.Entry<String, String> entry : DEFAULT_VALUES.entrySet()) {
+            String propKey = PROP_HOOKS + entry.getKey();
+            String value = SystemProperties.get(propKey);
+            setPropValue(entry.getKey(), value != null ? value : entry.getValue());
+        }
     }
 
     private static boolean isCallerSafetyNet() {
@@ -295,5 +317,8 @@ public class PixelPropsUtils {
             Log.i(TAG, "Blocked key attestation sIsGms=" + sIsGms + " sIsFinsky=" + sIsFinsky);
             throw new UnsupportedOperationException();
         }
+    }
+    static void dlog(String msg) {
+        if (DEBUG) Log.d(TAG, msg);
     }
 }
