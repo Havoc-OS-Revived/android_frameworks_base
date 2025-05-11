@@ -4059,4 +4059,8 @@
 
   <!-- For dynamic default font styles -->
   <java-symbol type="string" name="config_bodyFontFamily" />
+  
+  <!-- List of protected packages that require biometric authentication for modification -->
+  <java-symbol type="array" name="config_biometric_protected_package_names" />
+
 </resources>
